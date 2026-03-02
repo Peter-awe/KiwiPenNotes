@@ -33,9 +33,18 @@ export default function AudioRecorder({
   const startRecording = useCallback(() => {
     if (!SpeechCapture.isSupported()) {
       alert(
-        "Web Speech API is not supported in this browser.\nPlease use Chrome or Edge."
+        "Web Speech API is not supported in this browser.\nPlease use Google Chrome."
       );
       return;
+    }
+
+    // Warn Edge users — Edge speech engine has limited language support
+    const isEdge = navigator.userAgent.includes("Edg/");
+    if (isEdge) {
+      const proceed = window.confirm(
+        "Microsoft Edge has limited speech recognition support.\n\nFor the best experience, please use Google Chrome.\n\nTry anyway?"
+      );
+      if (!proceed) return;
     }
 
     setSpeechError("");
