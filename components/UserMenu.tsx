@@ -106,14 +106,27 @@ export function UserMenu() {
           {/* Menu items */}
           <div className="py-1">
             {!isPro && (
-              <Link
-                href="/#pricing"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700/50 transition"
+              <button
+                onClick={async () => {
+                  setOpen(false);
+                  if (!user) return;
+                  const res = await fetch("/api/stripe/checkout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      plan: "pro_monthly",
+                      userId: user.id,
+                      email: user.email,
+                    }),
+                  });
+                  const { url } = await res.json();
+                  if (url) window.location.href = url;
+                }}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700/50 transition w-full text-left"
               >
                 <Crown className="w-4 h-4" />
                 Upgrade to Pro
-              </Link>
+              </button>
             )}
             <Link
               href="/settings"

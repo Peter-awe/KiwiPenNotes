@@ -63,6 +63,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (!OPENAI_KEY) {
+    return NextResponse.json(
+      { error: "Enhanced STT is temporarily unavailable. Please try again later." },
+      { status: 503 }
+    );
+  }
+
   try {
     const formData = await req.formData();
     const audioFile = formData.get("audio") as File | null;
@@ -72,10 +79,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No audio file" }, { status: 400 });
     }
 
-    // Calculate duration in hours (approximate from file size at ~128kbps)
+    // Estimate duration from file size (~128kbps) as fallback
     const fileSizeMB = audioFile.size / (1024 * 1024);
     const estimatedMinutes = fileSizeMB / 0.96; // ~0.96 MB/min at 128kbps
-    const estimatedHours = estimatedMinutes / 60;
 
     // Send to OpenAI Whisper / GPT-4o-mini-transcribe
     const openaiForm = new FormData();
@@ -104,7 +110,7 @@ export async function POST(req: NextRequest) {
 
     // Update usage
     const actualHours = (data.duration || estimatedMinutes * 60) / 3600;
-    const newUsage = hoursUsed + Math.max(actualHours, estimatedHours);
+    const newUsage = hoursUsed + actualHours;
 
     await supabase
       .from("user_profiles")

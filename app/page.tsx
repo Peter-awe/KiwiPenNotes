@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Mic,
   Languages,
@@ -15,9 +16,38 @@ import {
   Smartphone,
   Chrome,
   Apple,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export default function LandingPage() {
+  const { user } = useAuth();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  const handleGetPro = async (plan: string = "pro_monthly") => {
+    if (!user) {
+      window.location.href = "/signup";
+      return;
+    }
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan,
+          userId: user.id,
+          email: user.email,
+        }),
+      });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch {
+      // Fallback to signup if checkout fails
+      window.location.href = "/signup";
+    }
+    setCheckoutLoading(false);
+  };
   return (
     <div className="min-h-screen">
       {/* ===== HERO ===== */}
@@ -366,15 +396,27 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <a
-                href="/signup"
-                className="block w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg text-center font-semibold transition"
+              <button
+                onClick={() => handleGetPro("pro_monthly")}
+                disabled={checkoutLoading}
+                className="block w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-900 rounded-lg text-center font-semibold transition"
               >
-                Get Pro
-              </a>
-              <p className="mt-3 text-center text-xs text-slate-500">
-                Also available: $0.99/hr pay-as-you-go
-              </p>
+                {checkoutLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Redirecting...
+                  </span>
+                ) : (
+                  "Get Pro — Monthly"
+                )}
+              </button>
+              <button
+                onClick={() => handleGetPro("pro_yearly")}
+                disabled={checkoutLoading}
+                className="block w-full py-2.5 mt-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 disabled:opacity-60 rounded-lg text-center text-sm font-medium transition"
+              >
+                Get Pro — $99.99/yr (save 17%)
+              </button>
             </div>
           </div>
         </div>

@@ -1,19 +1,45 @@
 // ============================================================
 // POST /api/stripe/portal — Create Stripe Customer Portal session
-// Body: { customerId: string }
+// No body needed — customerId is looked up from authenticated user
 // Returns: { url: string }
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { verifyAuth } from "@/lib/server-auth";
+import { createClient } from "@supabase/supabase-js";
+
+function getAdminSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { customerId } = await req.json();
+    // Verify caller identity — reject unauthenticated requests
+    const auth = await verifyAuth(req);
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Look up the user's Stripe customer ID from DB (don't trust client)
+    const supabase = getAdminSupabase();
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("stripe_customer_id")
+      .eq("id", auth.userId)
+      .single();
+
+    const customerId = profile?.stripe_customer_id;
 
     if (!customerId) {
       return NextResponse.json(
-        { error: "Missing customerId" },
+        { error: "No subscription found" },
         { status: 400 }
       );
     }

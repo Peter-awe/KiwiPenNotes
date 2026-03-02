@@ -5,22 +5,20 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+// Public Supabase credentials (safe to expose — these are the anon/public keys)
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  "https://ggczwqlopjiyuhbnnpgs.supabase.co";
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnY3p3cWxvcGppeXVoYm5ucGdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MzE2OTMsImV4cCI6MjA4ODAwNzY5M30.c_3xGQd_wH4LKpwvGNddl-YXMNkFDib734ZYV5FccYc";
+
 let _supabase: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (_supabase) return _supabase;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-  if (!url || !key) {
-    // Return a dummy client that won't crash — features just won't work
-    console.warn("Supabase env vars not set — auth features disabled");
-    _supabase = createClient("https://placeholder.supabase.co", "placeholder");
-    return _supabase;
-  }
-
-  _supabase = createClient(url, key);
+  _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   return _supabase;
 }
 
