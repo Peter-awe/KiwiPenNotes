@@ -15,9 +15,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!DEEPSEEK_KEY) {
+    return NextResponse.json(
+      { error: "Translation service is temporarily unavailable. Please try again later." },
+      { status: 503 }
+    );
+  }
+
   const { text, sourceLang, targetLang } = await req.json();
   if (!text || !sourceLang || !targetLang) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
+  // Limit input size to prevent API abuse
+  if (text.length > 10000) {
+    return NextResponse.json({ error: "Text too long (max 10,000 chars)" }, { status: 400 });
   }
 
   try {

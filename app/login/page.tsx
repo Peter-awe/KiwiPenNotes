@@ -7,18 +7,36 @@ import { LogIn, Mail, Lock, Chrome as GoogleIcon } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const { signIn, signInWithGoogle, user } = useAuth();
+  const { signIn, signInWithGoogle, resetPassword, user } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState("");
+  const [forgotError, setForgotError] = useState("");
 
   // Redirect if already logged in
   if (user) {
     router.replace("/record");
     return null;
   }
+
+  const handleForgot = async () => {
+    setForgotError("");
+    setForgotMsg("");
+    setForgotLoading(true);
+    const err = await resetPassword(forgotEmail);
+    setForgotLoading(false);
+    if (err) {
+      setForgotError(err);
+    } else {
+      setForgotMsg("Password reset link sent to your email");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +110,57 @@ export default function LoginPage() {
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgot(!showForgot);
+                  setForgotError("");
+                  setForgotMsg("");
+                }}
+                className="mt-1.5 text-xs text-blue-400 hover:text-blue-300 transition"
+              >
+                Forgot password?
+              </button>
             </div>
+
+            {showForgot && (
+              <div className="rounded-lg border border-slate-600 bg-slate-900/50 p-4 space-y-3">
+                <p className="text-sm text-slate-300">
+                  Enter your email and we&apos;ll send a reset link.
+                </p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-900 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleForgot}
+                    disabled={forgotLoading || !forgotEmail}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white rounded-lg text-sm font-medium transition whitespace-nowrap"
+                  >
+                    {forgotLoading ? "Sending..." : "Send link"}
+                  </button>
+                </div>
+                {forgotMsg && (
+                  <p className="text-sm text-green-400 bg-green-400/10 rounded-lg px-3 py-2">
+                    {forgotMsg}
+                  </p>
+                )}
+                {forgotError && (
+                  <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">
+                    {forgotError}
+                  </p>
+                )}
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">

@@ -1,13 +1,42 @@
 // ============================================================
 // POST /api/llm/summarize — LLM summary proxy for Pro users
-// Body: { transcript, targetLang, knowledgeContext? }
+// Body: { transcript, targetLang }
 // Returns: streaming text/event-stream
 // ============================================================
 
 import { NextRequest } from "next/server";
 import { requirePaid } from "@/lib/server-auth";
+import { createClient } from "@supabase/supabase-js";
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || "";
+
+function getAdminSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  );
+}
+
+async function getKBContext(userId: string): Promise<string> {
+  try {
+    const supabase = getAdminSupabase();
+    const { data } = await supabase
+      .from("documents")
+      .select("filename, content")
+      .eq("user_id", userId)
+      .limit(5);
+    if (!data || data.length === 0) return "";
+    let ctx = "";
+    for (const doc of data) {
+      const snippet = (doc.content || "").substring(0, 2000);
+      ctx += `--- ${doc.filename} ---\n${snippet}\n\n`;
+      if (ctx.length > 8000) break;
+    }
+    return ctx.trim();
+  } catch {
+    return "";
+  }
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requirePaid(req);
@@ -15,10 +44,22 @@ export async function POST(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { transcript, targetLang, knowledgeContext } = await req.json();
+  if (!DEEPSEEK_KEY) {
+    return new Response("Summary service is temporarily unavailable. Please try again later.", { status: 503 });
+  }
+
+  const { transcript, targetLang } = await req.json();
   if (!transcript) {
     return new Response("Missing transcript", { status: 400 });
   }
+
+  // Limit input size to prevent API abuse
+  if (transcript.length > 50000) {
+    return new Response("Transcript too long (max 50,000 chars)", { status: 400 });
+  }
+
+  // Fetch actual KB content server-side
+  const kbContent = await getKBContext(auth.userId);
 
   const systemPrompt = `You are a professional meeting summarizer. Create a comprehensive summary of the following meeting transcript:
 
@@ -30,7 +71,7 @@ Structure:
 ### Innovations & Ideas
 ### Open Questions
 
-${knowledgeContext ? `Reference material for context:\n${knowledgeContext}\n\n` : ""}
+${kbContent ? `Reference material for context:\n${kbContent}\n\n` : ""}
 Respond in ${targetLang || "English"}. Be thorough but concise.`;
 
   try {

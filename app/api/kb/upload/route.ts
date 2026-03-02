@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePaid } from "@/lib/server-auth";
 import { createClient } from "@supabase/supabase-js";
+import { PDFParse } from "pdf-parse";
 
 function getAdminSupabase() {
   return createClient(
@@ -15,41 +16,14 @@ function getAdminSupabase() {
   );
 }
 
-// Simple PDF text extraction (works in edge/worker environments)
-// Falls back to reading as text if pdf-parse isn't available
 async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
-  // Simple approach: extract visible text from PDF binary
-  // This handles basic PDFs; for complex ones, consider a cloud PDF service
-  const bytes = new Uint8Array(buffer);
-  const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-
-  // Extract text between BT/ET (text objects) in PDF
-  const textParts: string[] = [];
-  const tjRegex = /\(([^)]*)\)\s*Tj/g;
-  let match;
-  while ((match = tjRegex.exec(text)) !== null) {
-    if (match[1].trim()) textParts.push(match[1]);
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy();
   }
-
-  if (textParts.length > 0) {
-    return textParts.join(" ");
-  }
-
-  // Fallback: try to extract any readable text
-  const readable = text.replace(/[^\x20-\x7E\n\r\t]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // Filter out PDF structure noise
-  const lines = readable.split(" ").filter(
-    (w) =>
-      w.length > 1 &&
-      !w.startsWith("/") &&
-      !w.match(/^\d+$/) &&
-      !w.match(/^[a-f0-9]+$/i)
-  );
-
-  return lines.join(" ").substring(0, 50000); // Cap at 50K chars
 }
 
 export async function POST(req: NextRequest) {

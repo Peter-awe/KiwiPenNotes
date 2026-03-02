@@ -189,13 +189,8 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={async () => {
-                    if (!profile?.stripe_customer_id) return;
                     const res = await fetch("/api/stripe/portal", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        customerId: profile.stripe_customer_id,
-                      }),
                     });
                     const { url } = await res.json();
                     if (url) window.location.href = url;
@@ -222,13 +217,47 @@ export default function SettingsPage() {
                 Upgrade to Pro for AI-enhanced transcription, high-quality LLM
                 translation, knowledge base, and more.
               </p>
-              <Link
-                href="/#pricing"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg text-sm font-medium transition"
-              >
-                <Crown className="w-4 h-4" />
-                Upgrade to Pro — $9.99/mo
-              </Link>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    if (!user) return;
+                    const res = await fetch("/api/stripe/checkout", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        plan: "pro_monthly",
+                        userId: user.id,
+                        email: user.email,
+                      }),
+                    });
+                    const { url } = await res.json();
+                    if (url) window.location.href = url;
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-lg text-sm font-medium transition"
+                >
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Pro — $9.99/mo
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!user) return;
+                    const res = await fetch("/api/stripe/checkout", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        plan: "pro_yearly",
+                        userId: user.id,
+                        email: user.email,
+                      }),
+                    });
+                    const { url } = await res.json();
+                    if (url) window.location.href = url;
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 rounded-lg text-sm font-medium transition"
+                >
+                  $99.99/yr (save 17%)
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -33,6 +33,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<string | null>;
   refreshProfile: () => Promise<void>;
   tier: SubscriptionTier;
   isPro: boolean;
@@ -48,11 +49,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Send welcome email (fire-and-forget, only on first login)
+  const sendWelcomeEmail = useCallback(async () => {
+    try {
+      const { data: { session: s } } = await getSupabase().auth.getSession();
+      if (!s?.access_token) return;
+      await fetch("/api/welcome-email", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${s.access_token}` },
+      });
+    } catch {
+      // Silent fail — welcome email is non-critical
+    }
+  }, []);
+
   // Load profile for user
   const loadProfile = useCallback(async (userId: string) => {
     const p = await getProfile(userId);
     if (!p) {
-      // First login — create profile
+      // First login — create profile & send welcome email
       await upsertProfile(userId, {
         email: user?.email || "",
         subscription_tier: "free",
@@ -61,10 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const created = await getProfile(userId);
       setProfile(created);
+      sendWelcomeEmail();
     } else {
       setProfile(p);
     }
-  }, [user?.email]);
+  }, [user?.email, sendWelcomeEmail]);
 
   const refreshProfile = useCallback(async () => {
     if (user) await loadProfile(user.id);
@@ -140,6 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const resetPassword = async (email: string): Promise<string | null> => {
+    const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    return error?.message ?? null;
+  };
+
   const tier: SubscriptionTier =
     profile?.subscription_status === "active"
       ? profile.subscription_tier
@@ -159,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signInWithGoogle,
         signOut,
+        resetPassword,
         refreshProfile,
         tier,
         isPro: isProUser,

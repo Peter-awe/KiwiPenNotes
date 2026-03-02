@@ -1,19 +1,40 @@
 // ============================================================
 // POST /api/stripe/checkout — Create a Stripe Checkout Session
-// Body: { priceId: string, userId: string, email: string }
+// Body: { plan: "pro_monthly" | "pro_yearly" }
 // Returns: { url: string } — redirect URL for Stripe Checkout
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { verifyAuth } from "@/lib/server-auth";
+
+// Map plan names to env-based price IDs (keeps IDs server-side only)
+const PLAN_PRICES: Record<string, string | undefined> = {
+  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY,
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { priceId, userId, email } = await req.json();
-
-    if (!priceId || !userId || !email) {
+    // Verify caller identity — reject unauthenticated requests
+    const auth = await verifyAuth(req);
+    if (!auth) {
       return NextResponse.json(
-        { error: "Missing priceId, userId, or email" },
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { userId, email } = auth;
+
+    const { plan } = await req.json();
+
+    // Resolve priceId from plan name only (never accept raw price IDs from client)
+    const priceId = plan ? PLAN_PRICES[plan] : undefined;
+
+    if (!priceId) {
+      return NextResponse.json(
+        { error: "Missing plan or priceId" },
         { status: 400 }
       );
     }
