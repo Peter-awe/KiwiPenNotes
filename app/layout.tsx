@@ -55,6 +55,25 @@ export default function RootLayout({
             >
               Download
             </Link>
+            <span className="text-slate-600 hidden md:block">|</span>
+            <Link
+              href="/record"
+              className="text-sm text-slate-400 hover:text-white transition hidden md:block"
+            >
+              Record
+            </Link>
+            <Link
+              href="/library"
+              className="text-sm text-slate-400 hover:text-white transition hidden md:block"
+            >
+              Library
+            </Link>
+            <Link
+              href="/settings"
+              className="text-sm text-slate-400 hover:text-white transition hidden md:block"
+            >
+              Settings
+            </Link>
           </div>
           <div className="ml-auto flex items-center gap-4">
             <Link
