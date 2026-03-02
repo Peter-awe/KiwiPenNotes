@@ -5,7 +5,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-2.0-flash";
 
 function createClient(apiKey: string): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
@@ -158,20 +158,10 @@ ${transcript}`,
 
 export async function validateApiKey(apiKey: string): Promise<boolean> {
   try {
-    const ai = createClient(apiKey);
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: "Say 'ok'" }],
-        },
-      ],
-      config: {
-        maxOutputTokens: 10,
-      },
-    });
-    return !!response.text;
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+    );
+    return res.ok;
   } catch {
     return false;
   }
