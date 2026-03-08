@@ -7,7 +7,11 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
 function getAdminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // NEXT_PUBLIC_* is inlined at build time by Next.js — may be undefined
+  // on Cloudflare Workers if not set during build. Hardcode public URL fallback.
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    "https://ggczwqlopjiyuhbnnpgs.supabase.co";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     console.error(

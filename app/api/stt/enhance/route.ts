@@ -12,7 +12,7 @@ const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 
 function getAdminSupabase() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ggczwqlopjiyuhbnnpgs.supabase.co",
     process.env.SUPABASE_SERVICE_ROLE_KEY || ""
   );
 }
