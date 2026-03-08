@@ -32,12 +32,11 @@ export async function GET() {
     }
 
     // Step 2: Import and init Stripe
-    const Stripe = (await import("stripe")).default;
+    const { default: Stripe } = await import("stripe");
     addStep("stripe_import", { ok: true });
 
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-01-27.acacia" as Parameters<typeof Stripe>[1]["apiVersion"],
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-01-27.acacia" as any });
     addStep("stripe_init", { ok: true });
 
     // Step 3: Verify the price exists
