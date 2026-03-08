@@ -54,7 +54,7 @@ export class SpeechCapture {
    */
   start(lang: string): void {
     if (!SpeechCapture.isSupported()) {
-      this.onError?.("Web Speech API is not supported in this browser. Please use Chrome or Edge.");
+      this.onError?.("Web Speech API is not supported in this browser. Please use Chrome.");
       return;
     }
 

@@ -44,7 +44,7 @@ export default function LandingPage() {
 
   const handleCheckout = async (plan: string) => {
     if (!user || !session?.access_token) {
-      window.location.href = "/signup";
+      window.location.href = "/login";
       return;
     }
     setCheckoutLoading(plan);
@@ -57,12 +57,35 @@ export default function LandingPage() {
         },
         body: JSON.stringify({ plan }),
       });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch {
-      window.location.href = "/signup";
+      const data = await res.json();
+      if (!res.ok) {
+        alert(
+          locale === "zh"
+            ? `支付跳转失败: ${data.error || "未知错误"}`
+            : `Checkout failed: ${data.error || "Unknown error"}`
+        );
+        setCheckoutLoading(null);
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(
+          locale === "zh"
+            ? "无法获取支付链接，请稍后重试。"
+            : "Could not get checkout URL. Please try again."
+        );
+        setCheckoutLoading(null);
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      alert(
+        locale === "zh"
+          ? "网络错误，请检查网络后重试。"
+          : "Network error. Please check your connection and try again."
+      );
+      setCheckoutLoading(null);
     }
-    setCheckoutLoading(null);
   };
 
   return (

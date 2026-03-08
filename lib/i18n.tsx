@@ -101,7 +101,7 @@ const en = {
     web: {
       name: "Web",
       status: "Available now",
-      desc: "Works in Chrome & Edge. No download needed.",
+      desc: "Works in Chrome. No download needed.",
       cta: "Open App",
     },
     macos: {
@@ -218,7 +218,7 @@ const en = {
     subtitle:
       "Your next meeting is already complicated enough. Let KiwiPenNotes handle the rest.",
     button: "Try Free Now",
-    trustLine: "No sign-up. No credit card. Works in Chrome & Edge.",
+    trustLine: "No sign-up. No credit card. Works in Chrome.",
   },
   footer: {
     brand: "KiwiPenNotes",
@@ -319,7 +319,7 @@ const zh: typeof en = {
     web: {
       name: "网页版",
       status: "现已可用",
-      desc: "支持 Chrome 和 Edge 浏览器，无需下载。",
+      desc: "支持 Chrome 浏览器，无需下载。",
       cta: "打开应用",
     },
     macos: {
@@ -435,11 +435,11 @@ const zh: typeof en = {
     title: "不再错过重要内容",
     subtitle: "你的下一场会议已经够复杂了，让 KiwiPenNotes 来处理剩下的事。",
     button: "立即免费体验",
-    trustLine: "无需注册，无需信用卡，Chrome 和 Edge 即可使用。",
+    trustLine: "无需注册，无需信用卡，Chrome 即可使用。",
   },
   footer: {
     brand: "KiwiPenNotes",
-    byline: "盘升智能",
+    byline: "潘盛智能",
     app: "应用",
     download: "下载",
     copyright: "© 2026 KiwiPenNotes. 保留所有权利。",
