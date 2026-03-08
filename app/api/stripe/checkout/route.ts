@@ -2,18 +2,52 @@
 // POST /api/stripe/checkout — Create a Stripe Checkout Session
 // Body: { plan: "plus_monthly" | "plus_yearly" | "pro_monthly" | "pro_yearly" }
 // Returns: { url: string } — redirect URL for Stripe Checkout
+//
+// ⚠️ One-time payment mode — no subscription, no auto-renewal.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { verifyAuth } from "@/lib/server-auth";
 
-// Map plan names to env-based price IDs (keeps IDs server-side only)
-const PLAN_PRICES: Record<string, string | undefined> = {
-  plus_monthly: process.env.STRIPE_PRICE_PLUS_MONTHLY,
-  plus_yearly: process.env.STRIPE_PRICE_PLUS_YEARLY,
-  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
-  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY,
+// Plan config: amount in cents, currency, display name, tier
+interface PlanConfig {
+  amount: number;
+  currency: string;
+  name: string;
+  tier: string;
+  period: string;
+}
+
+const PLAN_CONFIG: Record<string, PlanConfig> = {
+  plus_monthly: {
+    amount: 199,
+    currency: "cad",
+    name: "KiwiPenNotes Plus — 1 Month",
+    tier: "plus",
+    period: "monthly",
+  },
+  plus_yearly: {
+    amount: 1999,
+    currency: "cad",
+    name: "KiwiPenNotes Plus — 1 Year",
+    tier: "plus",
+    period: "yearly",
+  },
+  pro_monthly: {
+    amount: 999,
+    currency: "usd",
+    name: "KiwiPenNotes Pro Max — 1 Month",
+    tier: "pro",
+    period: "monthly",
+  },
+  pro_yearly: {
+    amount: 9999,
+    currency: "usd",
+    name: "KiwiPenNotes Pro Max — 1 Year",
+    tier: "pro",
+    period: "yearly",
+  },
 };
 
 export async function POST(req: NextRequest) {
@@ -31,12 +65,11 @@ export async function POST(req: NextRequest) {
 
     const { plan } = await req.json();
 
-    // Resolve priceId from plan name only (never accept raw price IDs from client)
-    const priceId = plan ? PLAN_PRICES[plan] : undefined;
+    const config = plan ? PLAN_CONFIG[plan] : undefined;
 
-    if (!priceId) {
+    if (!config) {
       return NextResponse.json(
-        { error: "Missing plan or priceId" },
+        { error: "Invalid plan" },
         { status: 400 }
       );
     }
@@ -60,24 +93,43 @@ export async function POST(req: NextRequest) {
       customerId = customer.id;
     }
 
-    // Create checkout session
+    // Create one-time payment checkout session
     const origin = req.headers.get("origin") || "https://kiwipennotes.com";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: config.currency,
+            product_data: { name: config.name },
+            unit_amount: config.amount,
+          },
+          quantity: 1,
+        },
+      ],
       success_url: `${origin}/settings?payment=success`,
       cancel_url: `${origin}/#pricing`,
       metadata: {
         supabase_user_id: userId,
+        tier: config.tier,
+        period: config.period,
       },
-      subscription_data: {
+      payment_intent_data: {
         metadata: {
           supabase_user_id: userId,
+          tier: config.tier,
+          period: config.period,
         },
       },
       allow_promotion_codes: true,
+      custom_text: {
+        submit: {
+          message:
+            "✅ 一次性付款，绝不隐形续费 · One-time payment, no auto-renewal.",
+        },
+      },
     });
 
     return NextResponse.json({ url: session.url });

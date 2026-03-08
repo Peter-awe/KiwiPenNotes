@@ -1,7 +1,7 @@
 // ============================================================
 // POST /api/stripe/webhook — Handle Stripe webhook events
-// Updates Supabase user_profiles on subscription changes
-// Supports Plus and Pro tiers via price ID resolution
+// Updates Supabase user_profiles on payment / subscription changes
+// Supports one-time payment mode (primary) + legacy subscription events
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -99,7 +99,11 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
         if (userId) {
-          const tier = await resolveTierFromSession(stripe, session);
+          // Prefer tier from metadata (one-time payment mode),
+          // fall back to line_items resolution (legacy subscription mode)
+          const tier =
+            session.metadata?.tier ||
+            (await resolveTierFromSession(stripe, session));
           await updateUserSubscription(
             userId,
             tier,
