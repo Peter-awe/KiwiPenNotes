@@ -33,13 +33,13 @@ export async function GET() {
     }
 
     // 3. Create checkout session with the coupon applied
+    // Note: discounts and allow_promotion_codes are mutually exclusive in Stripe
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       discounts: [{ coupon: couponId }],
       success_url: "https://kiwipennotes.com/settings?payment=success",
       cancel_url: "https://kiwipennotes.com/#pricing",
-      allow_promotion_codes: false,
     });
 
     return NextResponse.json({
