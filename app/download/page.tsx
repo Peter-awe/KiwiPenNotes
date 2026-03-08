@@ -10,6 +10,9 @@ import {
   ExternalLink,
   Share,
   Plus,
+  Download,
+  ShieldAlert,
+  MousePointer,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
 
@@ -18,15 +21,29 @@ type Platform = "ios" | "macos" | "web";
 function detectPlatform(): Platform {
   if (typeof navigator === "undefined") return "web";
   const ua = navigator.userAgent;
-  // iPhone or iPad (including iPadOS which reports as Mac)
   if (/iPhone|iPad|iPod/.test(ua)) return "ios";
-  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return "ios"; // iPadOS
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return "ios";
   if (/Macintosh|Mac OS X/.test(ua)) return "macos";
   return "web";
 }
 
-const GITHUB_RELEASE_URL =
-  "https://github.com/Peter-awe/KiwiPenNotes/releases/latest";
+function detectArch(): "arm64" | "x64" | "unknown" {
+  if (typeof navigator === "undefined") return "unknown";
+  // Apple Silicon Macs report arm in platform or userAgentData
+  // @ts-expect-error userAgentData is not in all TS defs
+  const uaData = navigator.userAgentData;
+  if (uaData?.platform === "macOS") return "arm64"; // modern Macs are mostly Apple Silicon
+  // Fallback: check if CPU class hints at ARM
+  if (/Mac/.test(navigator.platform)) {
+    // Most Macs sold since late 2020 are Apple Silicon
+    return "arm64";
+  }
+  return "unknown";
+}
+
+const RELEASE_BASE = "https://github.com/Peter-awe/KiwiPenNotes-desktop/releases/latest";
+const DMG_ARM64 = "https://github.com/Peter-awe/KiwiPenNotes-desktop/releases/latest/download/KiwiPenNotes-1.0.0-arm64.dmg";
+const DMG_INTEL = "https://github.com/Peter-awe/KiwiPenNotes-desktop/releases/latest/download/KiwiPenNotes-1.0.0.dmg";
 
 const text = {
   en: {
@@ -43,10 +60,12 @@ const text = {
     },
     macos: {
       name: "macOS",
-      status: "Coming Q2 2026",
-      desc: "Native app with system audio capture. Record Zoom, Teams & any app audio.",
-      cta: "Check Releases",
-      features: ["Everything in Web", "System audio capture", "Offline mode", "Menu bar quick access"],
+      status: "Available Now",
+      desc: "Native desktop app. Dedicated window for your meetings, runs alongside other apps.",
+      ctaAppleSilicon: "Download for Apple Silicon",
+      ctaIntel: "Download for Intel Mac",
+      ctaAll: "All Downloads",
+      features: ["Everything in Web", "Native macOS window", "Microphone auto-granted", "Menu bar integration"],
     },
     ios: {
       name: "iPhone / iPad",
@@ -58,13 +77,22 @@ const text = {
     pwaSteps: {
       title: "Install on iPhone / iPad",
       step1: "Open kiwipennotes.com in Safari",
-      step2: 'Tap the Share button',
-      step3: 'Scroll down and tap "Add to Home Screen"',
-      step4: 'Tap "Add" — done! Open from your Home Screen.',
+      step2: "Tap the Share button",
+      step3: "Scroll down and tap \"Add to Home Screen\"",
+      step4: "Tap \"Add\" — done! Open from your Home Screen.",
     },
-    notify: "Get notified when macOS launches",
-    notifyDesc: "Star the GitHub repo to stay updated on releases.",
-    starGithub: "Star on GitHub",
+    macSteps: {
+      title: "macOS Installation Guide",
+      subtitle: "First time opening? macOS may show a security warning — this is normal for apps downloaded outside the App Store.",
+      step1: "Open the downloaded .dmg file",
+      step2: "Drag KiwiPenNotes into the Applications folder",
+      step3: "Open Applications, find KiwiPenNotes, RIGHT-CLICK (or Control+click) on it",
+      step4: "Select \"Open\" from the menu",
+      step5: "Click \"Open\" in the pop-up dialog — done! It will open normally from now on.",
+      note: "This is a one-time step. After the first launch, you can open the app normally by double-clicking.",
+      whyTitle: "Why does this happen?",
+      whyDesc: "macOS protects you from apps not downloaded from the App Store. This is the standard way to open apps from independent developers. Many popular apps (Homebrew, OBS, etc.) require the same step.",
+    },
     sysReq: "System Requirements",
     webReq: ["Chrome 90+ or Edge 90+", "Microphone access"],
     macReq: ["macOS 13 Ventura or later", "Apple Silicon or Intel"],
@@ -84,10 +112,12 @@ const text = {
     },
     macos: {
       name: "macOS",
-      status: "2026年Q2推出",
-      desc: "原生应用，可录制系统音频。支持 Zoom、Teams 等任何应用。",
-      cta: "查看发布",
-      features: ["包含网页版全部功能", "系统音频录制", "离线模式", "菜单栏快捷访问"],
+      status: "现已可用",
+      desc: "原生桌面应用，独立窗口运行会议转录，和其他应用并行使用。",
+      ctaAppleSilicon: "下载 Apple Silicon 版",
+      ctaIntel: "下载 Intel Mac 版",
+      ctaAll: "所有下载",
+      features: ["包含网页版全部功能", "原生 macOS 窗口", "麦克风自动授权", "菜单栏集成"],
     },
     ios: {
       name: "iPhone / iPad",
@@ -103,9 +133,18 @@ const text = {
       step3: "向下滑动，点击「添加到主屏幕」",
       step4: "点击「添加」— 完成！从主屏幕打开即可。",
     },
-    notify: "macOS 版上线时通知我",
-    notifyDesc: "Star GitHub 仓库获取最新发布动态。",
-    starGithub: "Star GitHub",
+    macSteps: {
+      title: "macOS 安装教程",
+      subtitle: "首次打开时 macOS 可能弹出安全提示 — 这是正常的，所有非 App Store 下载的应用都需要这一步。",
+      step1: "打开下载的 .dmg 文件",
+      step2: "把 KiwiPenNotes 拖到「应用程序」文件夹",
+      step3: "打开「应用程序」，找到 KiwiPenNotes，右键点击（或 Control+点击）",
+      step4: "在菜单中选择「打开」",
+      step5: "在弹出的对话框中点击「打开」— 完成！以后就可以正常打开了。",
+      note: "这是一次性操作。首次打开后，以后双击即可正常启动。",
+      whyTitle: "为什么会这样？",
+      whyDesc: "macOS 会保护你免受不明来源应用的侵害。这是打开非 App Store 应用的标准操作。很多知名软件（Homebrew、OBS 等）首次打开时都需要这一步。",
+    },
     sysReq: "系统要求",
     webReq: ["Chrome 90+ 或 Edge 90+", "麦克风权限"],
     macReq: ["macOS 13 Ventura 或更高", "Apple Silicon 或 Intel"],
@@ -118,6 +157,7 @@ export default function DownloadPage() {
   const t = text[locale];
   const [platform, setPlatform] = useState<Platform>("web");
   const [showPwaGuide, setShowPwaGuide] = useState(false);
+  const [showMacGuide, setShowMacGuide] = useState(false);
 
   useEffect(() => {
     setPlatform(detectPlatform());
@@ -138,7 +178,7 @@ export default function DownloadPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         {/* ── Web Card ── */}
         <div
           className={`rounded-xl p-8 text-center transition-all ${
@@ -174,29 +214,42 @@ export default function DownloadPage() {
         <div
           className={`rounded-xl p-8 text-center transition-all ${
             platform === "macos"
-              ? "border-2 border-amber-500/50 bg-slate-800/80 ring-2 ring-amber-500/20"
+              ? "border-2 border-green-500/50 bg-slate-800/80 ring-2 ring-green-500/20"
               : "border border-slate-700 bg-slate-800/40"
           }`}
         >
-          <div className="w-16 h-16 rounded-2xl bg-slate-700/50 border border-slate-600 flex items-center justify-center mx-auto mb-4">
-            <Monitor className="w-8 h-8 text-slate-300" />
+          <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
+            <Monitor className="w-8 h-8 text-green-400" />
           </div>
           <h2 className="text-xl font-semibold mb-1">{t.macos.name}</h2>
-          <p className="text-amber-400 text-sm font-medium mb-4">{t.macos.status}</p>
+          <p className="text-green-400 text-sm font-medium mb-4">{t.macos.status}</p>
           <p className="text-sm text-slate-400 mb-6 leading-relaxed">{t.macos.desc}</p>
-          <a
-            href={GITHUB_RELEASE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition w-full justify-center"
+          <div className="space-y-2">
+            <a
+              href={DMG_ARM64}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition w-full justify-center"
+            >
+              <Download className="w-4 h-4" />
+              {t.macos.ctaAppleSilicon}
+            </a>
+            <a
+              href={DMG_INTEL}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm transition w-full justify-center"
+            >
+              {t.macos.ctaIntel}
+            </a>
+          </div>
+          <button
+            onClick={() => setShowMacGuide(true)}
+            className="mt-3 text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 transition"
           >
-            {t.macos.cta}
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+            <ShieldAlert className="w-3 h-3 inline mr-1" />
+            {locale === "zh" ? "首次打开遇到问题？" : "First time opening? See guide"}
+          </button>
           <div className="mt-4 space-y-2">
             {t.macos.features.map((f) => (
-              <div key={f} className="flex items-center gap-2 text-xs text-slate-500">
-                <Check className="w-3 h-3 text-slate-600 shrink-0" />
+              <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
+                <Check className="w-3 h-3 text-green-400 shrink-0" />
                 {f}
               </div>
             ))}
@@ -235,9 +288,59 @@ export default function DownloadPage() {
         </div>
       </div>
 
-      {/* ── PWA Install Guide (shows on click or auto on iOS) ── */}
+      {/* ── macOS Install Guide ── */}
+      {(showMacGuide || platform === "macos") && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-8 mb-10 max-w-xl mx-auto">
+          <h3 className="text-lg font-semibold mb-2 text-center">{t.macSteps.title}</h3>
+          <p className="text-xs text-slate-400 text-center mb-6">{t.macSteps.subtitle}</p>
+          <div className="space-y-4">
+            {[
+              t.macSteps.step1,
+              t.macSteps.step2,
+              t.macSteps.step3,
+              t.macSteps.step4,
+              t.macSteps.step5,
+            ].map((step, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                  i === 2 ? "bg-amber-500/30 text-amber-300 ring-2 ring-amber-500/50" : "bg-amber-500/15 text-amber-400"
+                }`}>
+                  {i + 1}
+                </span>
+                <p className={`text-sm pt-0.5 ${i === 2 ? "text-amber-200 font-medium" : "text-slate-300"}`}>
+                  {step}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Visual hint */}
+          <div className="mt-5 flex items-center justify-center gap-2 text-slate-500 text-xs">
+            <MousePointer className="w-4 h-4" />
+            <span>{locale === "zh" ? "右键" : "Right-click"}</span>
+            <span>→</span>
+            <span>{locale === "zh" ? "「打开」" : "\"Open\""}</span>
+            <span>→</span>
+            <span>{locale === "zh" ? "「打开」" : "\"Open\""}</span>
+            <span>→ 🎉</span>
+          </div>
+
+          {/* One-time note */}
+          <div className="mt-5 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+            <p className="text-xs text-green-400 text-center font-medium">{t.macSteps.note}</p>
+          </div>
+
+          {/* Why explanation */}
+          <details className="mt-4 text-xs text-slate-500">
+            <summary className="cursor-pointer hover:text-slate-400 transition">{t.macSteps.whyTitle}</summary>
+            <p className="mt-2 leading-relaxed">{t.macSteps.whyDesc}</p>
+          </details>
+        </div>
+      )}
+
+      {/* ── PWA Install Guide ── */}
       {(showPwaGuide || platform === "ios") && (
-        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-8 mb-16 max-w-lg mx-auto">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-8 mb-10 max-w-xl mx-auto">
           <h3 className="text-lg font-semibold mb-6 text-center">{t.pwaSteps.title}</h3>
           <div className="space-y-4">
             {[t.pwaSteps.step1, t.pwaSteps.step2, t.pwaSteps.step3, t.pwaSteps.step4].map(
@@ -259,23 +362,6 @@ export default function DownloadPage() {
           </div>
         </div>
       )}
-
-      {/* ── Notify Section ── */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-8 text-center max-w-lg mx-auto">
-        <h3 className="text-lg font-semibold mb-2">{t.notify}</h3>
-        <p className="text-sm text-slate-400 mb-4">{t.notifyDesc}</p>
-        <a
-          href="https://github.com/Peter-awe/KiwiPenNotes"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-          </svg>
-          {t.starGithub}
-        </a>
-      </div>
 
       {/* ── System Requirements ── */}
       <div className="mt-16 text-center">
