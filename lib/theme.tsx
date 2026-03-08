@@ -34,12 +34,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     return "dark";
   });
-  const [mounted, setMounted] = useState(false);
 
-  // Apply theme class on mount
+  // Apply theme class on mount and when theme changes
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    setMounted(true);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
@@ -51,11 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
+  // Always provide context — even during SSR/prerender
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
