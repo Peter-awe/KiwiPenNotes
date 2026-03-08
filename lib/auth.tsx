@@ -63,13 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Load profile for user
-  const loadProfile = useCallback(async (userId: string) => {
+  // Load profile for user (email passed explicitly to avoid stale closure)
+  const loadProfile = useCallback(async (userId: string, email?: string) => {
     const p = await getProfile(userId);
     if (!p) {
       // First login — create profile & send welcome email
       await upsertProfile(userId, {
-        email: user?.email || "",
+        email: email || user?.email || "",
         subscription_tier: "free",
         subscription_status: "none",
         stt_hours_used: 0,
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadProfile(s.user.id).finally(() => setLoading(false));
+        loadProfile(s.user.id, s.user.email || "").finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadProfile(s.user.id);
+        loadProfile(s.user.id, s.user.email || "");
       } else {
         setProfile(null);
       }
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/record`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     return error?.message ?? null;
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await getSupabase().auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/record`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
   };

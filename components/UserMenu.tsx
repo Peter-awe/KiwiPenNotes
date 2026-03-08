@@ -6,7 +6,7 @@ import Link from "next/link";
 import { LogOut, Settings, Crown, CreditCard } from "lucide-react";
 
 export function UserMenu() {
-  const { user, profile, loading, signOut, isPro } = useAuth();
+  const { user, session, profile, loading, signOut, isPro } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -109,15 +109,14 @@ export function UserMenu() {
               <button
                 onClick={async () => {
                   setOpen(false);
-                  if (!user) return;
+                  if (!user || !session?.access_token) return;
                   const res = await fetch("/api/stripe/checkout", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      plan: "pro_monthly",
-                      userId: user.id,
-                      email: user.email,
-                    }),
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ plan: "pro_monthly" }),
                   });
                   const { url } = await res.json();
                   if (url) window.location.href = url;
@@ -143,6 +142,9 @@ export function UserMenu() {
                   // Redirect to Stripe portal
                   const res = await fetch("/api/stripe/portal", {
                     method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${session?.access_token}`,
+                    },
                   });
                   const { url } = await res.json();
                   if (url) window.location.href = url;

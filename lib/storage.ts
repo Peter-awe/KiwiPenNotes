@@ -161,6 +161,14 @@ export function deleteRecording(id: string): void {
   persistRecordings(all);
 }
 
+export function updateRecording(id: string, updates: Partial<Omit<Recording, "id" | "date">>): void {
+  const all = getAllRecordings();
+  const idx = all.findIndex((r) => r.id === id);
+  if (idx === -1) return;
+  all[idx] = { ...all[idx], ...updates };
+  persistRecordings(all);
+}
+
 export function exportRecording(
   id: string,
   format: "md" | "txt" = "md"

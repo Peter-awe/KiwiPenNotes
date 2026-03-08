@@ -7,8 +7,16 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
 function getAdminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error(
+      "⚠️ server-auth: Missing env vars —",
+      !url ? "NEXT_PUBLIC_SUPABASE_URL" : "",
+      !key ? "SUPABASE_SERVICE_ROLE_KEY" : ""
+    );
+    throw new Error("Supabase admin env vars not configured");
+  }
   return createClient(url, key);
 }
 

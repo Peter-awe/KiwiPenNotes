@@ -21,6 +21,8 @@ export default function AudioRecorder({
 
   const speechRef = useRef<SpeechCapture | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const gotResultRef = useRef(false);
+  const micCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const updateStatus = useCallback(
     (s: "idle" | "recording" | "paused") => {
@@ -48,10 +50,12 @@ export default function AudioRecorder({
     }
 
     setSpeechError("");
+    gotResultRef.current = false;
     const speech = new SpeechCapture();
     speechRef.current = speech;
 
     speech.onResult = (result) => {
+      gotResultRef.current = true;
       setSpeechError(""); // Clear error on successful result
       onResult(result);
     };
@@ -73,6 +77,14 @@ export default function AudioRecorder({
     timerRef.current = setInterval(() => {
       setElapsed((prev) => prev + 1);
     }, 1000);
+
+    // If no speech result after 10s, show a helpful mic-check hint
+    if (micCheckTimerRef.current) clearTimeout(micCheckTimerRef.current);
+    micCheckTimerRef.current = setTimeout(() => {
+      if (!gotResultRef.current && speechRef.current?.isActive()) {
+        setSpeechError("No speech detected — check your microphone and try speaking louder.");
+      }
+    }, 10000);
   }, [sourceLang, onResult, updateStatus]);
 
   const pauseRecording = useCallback(() => {
@@ -97,6 +109,10 @@ export default function AudioRecorder({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (micCheckTimerRef.current) {
+      clearTimeout(micCheckTimerRef.current);
+      micCheckTimerRef.current = null;
+    }
     speechRef.current?.stop();
     speechRef.current = null;
     updateStatus("idle");
@@ -106,6 +122,7 @@ export default function AudioRecorder({
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (micCheckTimerRef.current) clearTimeout(micCheckTimerRef.current);
       speechRef.current?.stop();
     };
   }, []);
