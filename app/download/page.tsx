@@ -12,7 +12,6 @@ import {
   Plus,
   Download,
   ShieldAlert,
-  MousePointer,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
 
@@ -83,15 +82,15 @@ const text = {
     },
     macSteps: {
       title: "macOS Installation Guide",
-      subtitle: "First time opening? macOS may show a security warning — this is normal for apps downloaded outside the App Store.",
-      step1: "Open the downloaded .dmg file",
-      step2: "Drag KiwiPenNotes into the Applications folder",
-      step3: "Open Applications, find KiwiPenNotes, RIGHT-CLICK (or Control+click) on it",
-      step4: "Select \"Open\" from the menu",
-      step5: "Click \"Open\" in the pop-up dialog — done! It will open normally from now on.",
-      note: "This is a one-time step. After the first launch, you can open the app normally by double-clicking.",
-      whyTitle: "Why does this happen?",
-      whyDesc: "macOS protects you from apps not downloaded from the App Store. This is the standard way to open apps from independent developers. Many popular apps (Homebrew, OBS, etc.) require the same step.",
+      subtitle: "First time opening? macOS will show \"app is damaged\" — don't worry! This is normal for all apps downloaded outside the App Store. One simple fix:",
+      step1: "Open the downloaded .dmg file and drag KiwiPenNotes into Applications",
+      step2: "Press ⌘ Command + Space to open Spotlight, type \"Terminal\", press Enter",
+      step3_label: "Copy and paste this command, then press Enter:",
+      step3_cmd: "xattr -cr /Applications/KiwiPenNotes.app",
+      step4: "Double-click KiwiPenNotes in Applications — it opens! 🎉",
+      note: "This is a one-time fix. After this, the app opens normally forever.",
+      whyTitle: "Why does macOS say \"damaged\"?",
+      whyDesc: "It's not actually damaged. macOS blocks all apps not from the App Store or signed with an Apple certificate ($99/yr). This is the same fix used for many popular free apps like Homebrew, OBS Studio, and IINA.",
     },
     sysReq: "System Requirements",
     webReq: ["Chrome 90+ or Edge 90+", "Microphone access"],
@@ -135,15 +134,15 @@ const text = {
     },
     macSteps: {
       title: "macOS 安装教程",
-      subtitle: "首次打开时 macOS 可能弹出安全提示 — 这是正常的，所有非 App Store 下载的应用都需要这一步。",
-      step1: "打开下载的 .dmg 文件",
-      step2: "把 KiwiPenNotes 拖到「应用程序」文件夹",
-      step3: "打开「应用程序」，找到 KiwiPenNotes，右键点击（或 Control+点击）",
-      step4: "在菜单中选择「打开」",
-      step5: "在弹出的对话框中点击「打开」— 完成！以后就可以正常打开了。",
-      note: "这是一次性操作。首次打开后，以后双击即可正常启动。",
-      whyTitle: "为什么会这样？",
-      whyDesc: "macOS 会保护你免受不明来源应用的侵害。这是打开非 App Store 应用的标准操作。很多知名软件（Homebrew、OBS 等）首次打开时都需要这一步。",
+      subtitle: "首次打开时 macOS 会提示「应用已损坏」— 别担心！这是所有非 App Store 应用的正常现象。一步搞定：",
+      step1: "打开下载的 .dmg 文件，把 KiwiPenNotes 拖到「应用程序」",
+      step2: "按 ⌘ Command + 空格 打开聚焦搜索，输入「终端」，按回车",
+      step3_label: "复制粘贴下面这行命令，按回车执行：",
+      step3_cmd: "xattr -cr /Applications/KiwiPenNotes.app",
+      step4: "在「应用程序」中双击 KiwiPenNotes — 搞定！🎉",
+      note: "这是一次性操作，以后永远可以正常打开。",
+      whyTitle: "为什么 macOS 说「已损坏」？",
+      whyDesc: "其实并没有损坏。macOS 会拦截所有不是从 App Store 或没有 Apple 开发者证书（$99/年）签名的应用。这和 Homebrew、OBS Studio、IINA 等知名免费软件的处理方式完全一样。",
     },
     sysReq: "系统要求",
     webReq: ["Chrome 90+ 或 Edge 90+", "麦克风权限"],
@@ -294,35 +293,41 @@ export default function DownloadPage() {
           <h3 className="text-lg font-semibold mb-2 text-center">{t.macSteps.title}</h3>
           <p className="text-xs text-slate-400 text-center mb-6">{t.macSteps.subtitle}</p>
           <div className="space-y-4">
-            {[
-              t.macSteps.step1,
-              t.macSteps.step2,
-              t.macSteps.step3,
-              t.macSteps.step4,
-              t.macSteps.step5,
-            ].map((step, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
-                  i === 2 ? "bg-amber-500/30 text-amber-300 ring-2 ring-amber-500/50" : "bg-amber-500/15 text-amber-400"
-                }`}>
-                  {i + 1}
-                </span>
-                <p className={`text-sm pt-0.5 ${i === 2 ? "text-amber-200 font-medium" : "text-slate-300"}`}>
-                  {step}
-                </p>
+            {/* Step 1 */}
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm font-bold">1</span>
+              <p className="text-sm text-slate-300 pt-0.5">{t.macSteps.step1}</p>
+            </div>
+            {/* Step 2 */}
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm font-bold">2</span>
+              <p className="text-sm text-slate-300 pt-0.5">{t.macSteps.step2}</p>
+            </div>
+            {/* Step 3 — THE KEY STEP with copyable command */}
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-500/30 text-amber-300 ring-2 ring-amber-500/50 flex items-center justify-center text-sm font-bold">3</span>
+              <div className="flex-1">
+                <p className="text-sm text-amber-200 font-medium">{t.macSteps.step3_label}</p>
+                <div className="mt-2 relative group">
+                  <code className="block w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-green-400 text-sm font-mono select-all cursor-pointer">
+                    {t.macSteps.step3_cmd}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(t.macSteps.step3_cmd);
+                    }}
+                    className="absolute right-2 top-2 px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs text-slate-300 transition opacity-0 group-hover:opacity-100"
+                  >
+                    {locale === "zh" ? "复制" : "Copy"}
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-
-          {/* Visual hint */}
-          <div className="mt-5 flex items-center justify-center gap-2 text-slate-500 text-xs">
-            <MousePointer className="w-4 h-4" />
-            <span>{locale === "zh" ? "右键" : "Right-click"}</span>
-            <span>→</span>
-            <span>{locale === "zh" ? "「打开」" : "\"Open\""}</span>
-            <span>→</span>
-            <span>{locale === "zh" ? "「打开」" : "\"Open\""}</span>
-            <span>→ 🎉</span>
+            </div>
+            {/* Step 4 */}
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm font-bold">4</span>
+              <p className="text-sm text-slate-300 pt-0.5">{t.macSteps.step4}</p>
+            </div>
           </div>
 
           {/* One-time note */}
