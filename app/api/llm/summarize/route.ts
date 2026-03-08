@@ -6,6 +6,7 @@
 
 import { NextRequest } from "next/server";
 import { requirePaid } from "@/lib/server-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@supabase/supabase-js";
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || "";
@@ -42,6 +43,15 @@ export async function POST(req: NextRequest) {
   const auth = await requirePaid(req);
   if (!auth) {
     return new Response("Unauthorized", { status: 401 });
+  }
+
+  // ── Rate limit check ──
+  const rl = await checkRateLimit(auth.userId, "summarize");
+  if (!rl.allowed) {
+    return new Response(
+      `Daily summary limit reached (${rl.limit}/day). Resets at midnight UTC.`,
+      { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Limit": String(rl.limit) } }
+    );
   }
 
   if (!DEEPSEEK_KEY) {

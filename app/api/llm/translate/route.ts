@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requirePaid } from "@/lib/server-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || "";
 
@@ -13,6 +14,15 @@ export async function POST(req: NextRequest) {
   const auth = await requirePaid(req);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ── Rate limit check ──
+  const rl = await checkRateLimit(auth.userId, "translate");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Daily translation limit reached (${rl.limit}/day). Resets at midnight UTC.` },
+      { status: 429, headers: { "X-RateLimit-Remaining": "0", "X-RateLimit-Limit": String(rl.limit) } }
+    );
   }
 
   if (!DEEPSEEK_KEY) {
