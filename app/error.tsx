@@ -8,6 +8,7 @@
 // ============================================================
 
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function Error({
   error,
@@ -37,12 +38,12 @@ export default function Error({
         >
           Try again
         </button>
-        <a
+        <Link
           href="/"
           className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition font-medium"
         >
           Home
-        </a>
+        </Link>
       </div>
       {process.env.NODE_ENV === "development" && (
         <pre className="mt-8 p-4 bg-slate-800 rounded-lg text-left text-sm text-red-400 max-w-2xl overflow-auto">

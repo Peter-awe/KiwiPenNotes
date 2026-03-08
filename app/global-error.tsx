@@ -8,12 +8,13 @@
 // ============================================================
 
 export default function GlobalError({
-  error,
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  void _error; // Required by Next.js error boundary signature
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center px-6 text-center">
@@ -32,6 +33,7 @@ export default function GlobalError({
           >
             Refresh
           </button>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/"
             className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition font-medium"

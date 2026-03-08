@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   KeyRound,
   Check,
@@ -45,7 +44,7 @@ const LANGUAGES = [
 ];
 
 export default function SettingsPage() {
-  const { user, session, profile, isPro, isPlus, isPaid, tier, refreshProfile } = useAuth();
+  const { user, session, profile, isPro, isPlus, isPaid, refreshProfile } = useAuth();
 
   // Check for payment success redirect
   useEffect(() => {
