@@ -13,6 +13,7 @@ import {
   getSettings,
   getProvider as getProviderName,
   saveRecording,
+  updateRecording,
 } from "@/lib/storage";
 import { getProvider } from "@/lib/ai-provider";
 import type { AIProvider } from "@/lib/ai-provider";
@@ -107,13 +108,16 @@ async function proStreamLLM(
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let fullText = "";
+    let buffer = ""; // Buffer for incomplete SSE lines across chunks
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n");
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // Keep the last (possibly incomplete) line in the buffer
+      buffer = lines.pop() || "";
 
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
@@ -129,6 +133,23 @@ async function proStreamLLM(
           }
         } catch {
           // skip parse errors
+        }
+      }
+    }
+
+    // Process any remaining data in buffer
+    if (buffer.startsWith("data: ")) {
+      const data = buffer.slice(6);
+      if (data !== "[DONE]") {
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            fullText += content;
+            onToken(fullText);
+          }
+        } catch {
+          // skip
         }
       }
     }
@@ -202,6 +223,9 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
   const lastAnalysisTimeRef = useRef<number>(0);
   const accumulatedTextRef = useRef<string>("");
   const analysisInProgressRef = useRef(false);
+
+  // Saved recording ID (to update with summary later)
+  const lastRecordingIdRef = useRef<string>("");
 
   // Post-meeting summary
   const [meetingSummary, setMeetingSummary] = useState("");
@@ -444,7 +468,7 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
           translationBufferRef.current = "";
         }
 
-        saveRecording({
+        const recId = saveRecording({
           title: `Recording ${new Date().toLocaleString()}`,
           sourceLang,
           targetLang,
@@ -456,6 +480,7 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
           })),
           analyses: analyses.map((a) => a.content),
         });
+        lastRecordingIdRef.current = recId;
 
         setViewMode("post-meeting");
       }
@@ -559,6 +584,13 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
       setIsSummarizing(true);
       setMeetingSummary("");
 
+      // Helper: persist summary to saved recording
+      const persistSummary = (summary: string) => {
+        if (lastRecordingIdRef.current && summary) {
+          updateRecording(lastRecordingIdRef.current, { summary });
+        }
+      };
+
       if (proMode && token) {
         proStreamLLM(
           "/api/llm/summarize",
@@ -567,8 +599,11 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
           (fullText) => {
             if (!cancelled) setMeetingSummary(fullText);
           },
-          () => {
-            if (!cancelled) setIsSummarizing(false);
+          (fullText) => {
+            if (!cancelled) {
+              setIsSummarizing(false);
+              persistSummary(fullText);
+            }
           },
           (err) => {
             console.error("Summary error:", err);
@@ -579,14 +614,21 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
         const ai = await getAI();
         if (!ai || cancelled) return;
 
+        let accumulated = "";
         ai.streamSummary(
           fullTranscript,
           targetLang,
           (t) => {
-            if (!cancelled) setMeetingSummary((prev) => prev + t);
+            if (!cancelled) {
+              accumulated += t;
+              setMeetingSummary((prev) => prev + t);
+            }
           },
           () => {
-            if (!cancelled) setIsSummarizing(false);
+            if (!cancelled) {
+              setIsSummarizing(false);
+              persistSummary(accumulated);
+            }
           },
           (err) => {
             console.error("Summary error:", err);
@@ -623,6 +665,7 @@ function RecordPageInner({ proMode }: { proMode: boolean }) {
     currentRowIndexRef.current = -1;
     accumulatedTextRef.current = "";
     lastAnalysisTimeRef.current = 0;
+    lastRecordingIdRef.current = "";
     audioChunksRef.current = [];
   }, []);
 

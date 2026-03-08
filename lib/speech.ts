@@ -8,6 +8,27 @@ export interface SpeechResult {
   isFinal: boolean;
 }
 
+// Map ISO 639-1 short codes to BCP-47 codes for Web Speech API
+const LANG_MAP: Record<string, string> = {
+  en: "en-US",
+  zh: "zh-CN",
+  ja: "ja-JP",
+  ko: "ko-KR",
+  fr: "fr-FR",
+  de: "de-DE",
+  es: "es-ES",
+  pt: "pt-BR",
+  ru: "ru-RU",
+  ar: "ar-SA",
+};
+
+function toBcp47(lang: string): string {
+  if (!lang) return "";
+  // Already a full BCP-47 code (e.g. "en-US")
+  if (lang.includes("-") || lang.includes("_")) return lang;
+  return LANG_MAP[lang.toLowerCase()] || lang;
+}
+
 export class SpeechCapture {
   private recognition: SpeechRecognition | null = null;
   private _running = false;
@@ -55,10 +76,10 @@ export class SpeechCapture {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    // Use navigator.language as most reliable source, with user preference as override
+    // Use user-selected language (mapped to BCP-47), fall back to browser locale
     // Do NOT set recognition.lang if fallback mode — let browser decide completely
     if (!this._triedFallback) {
-      recognition.lang = navigator.language || "";
+      recognition.lang = toBcp47(this._lang) || navigator.language || "";
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -88,7 +109,9 @@ export class SpeechCapture {
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error === "aborted") {
+      // "aborted" = programmatic stop, "no-speech" = normal gap between utterances
+      // Both are expected in continuous mode — don't surface to UI
+      if (event.error === "aborted" || event.error === "no-speech") {
         return;
       }
 

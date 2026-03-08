@@ -45,7 +45,7 @@ const LANGUAGES = [
 ];
 
 export default function SettingsPage() {
-  const { user, profile, isPro, refreshProfile } = useAuth();
+  const { user, session, profile, isPro, refreshProfile } = useAuth();
 
   // Check for payment success redirect
   useEffect(() => {
@@ -191,6 +191,9 @@ export default function SettingsPage() {
                   onClick={async () => {
                     const res = await fetch("/api/stripe/portal", {
                       method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${session?.access_token}`,
+                      },
                     });
                     const { url } = await res.json();
                     if (url) window.location.href = url;
@@ -220,15 +223,14 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={async () => {
-                    if (!user) return;
+                    if (!user || !session?.access_token) return;
                     const res = await fetch("/api/stripe/checkout", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        plan: "pro_monthly",
-                        userId: user.id,
-                        email: user.email,
-                      }),
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({ plan: "pro_monthly" }),
                     });
                     const { url } = await res.json();
                     if (url) window.location.href = url;
@@ -240,15 +242,14 @@ export default function SettingsPage() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!user) return;
+                    if (!user || !session?.access_token) return;
                     const res = await fetch("/api/stripe/checkout", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        plan: "pro_yearly",
-                        userId: user.id,
-                        email: user.email,
-                      }),
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session.access_token}`,
+                      },
+                      body: JSON.stringify({ plan: "pro_yearly" }),
                     });
                     const { url } = await res.json();
                     if (url) window.location.href = url;

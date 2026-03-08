@@ -21,11 +21,11 @@ import {
 import { useAuth } from "@/lib/auth";
 
 export default function LandingPage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const handleGetPro = async (plan: string = "pro_monthly") => {
-    if (!user) {
+    if (!user || !session?.access_token) {
       window.location.href = "/signup";
       return;
     }
@@ -33,12 +33,11 @@ export default function LandingPage() {
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan,
-          userId: user.id,
-          email: user.email,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ plan }),
       });
       const { url } = await res.json();
       if (url) window.location.href = url;
