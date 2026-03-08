@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
   try {
     const { error } = await getResend().emails.send({
       from: FROM_ADDRESS,
+      replyTo: "peterpanqiwei@gmail.com",
       to: email,
       subject: "Welcome to KiwiPenNotes — Let's get started",
       html: `

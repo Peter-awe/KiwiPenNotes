@@ -36,6 +36,7 @@ export interface UserProfile {
   stripe_customer_id: string | null;
   subscription_tier: SubscriptionTier;
   subscription_status: string; // 'none' | 'active' | 'canceled' | 'past_due'
+  subscription_expires_at: string | null; // ISO timestamp, null = permanent
   stt_hours_used: number;
   stt_hours_reset_at: string | null;
   created_at: string;
@@ -53,7 +54,26 @@ export async function getProfile(
     .single();
 
   if (error || !data) return null;
-  return data as UserProfile;
+
+  const profile = data as UserProfile;
+
+  // Auto-downgrade if subscription has expired
+  if (
+    profile.subscription_expires_at &&
+    profile.subscription_tier !== "free" &&
+    new Date(profile.subscription_expires_at) < new Date()
+  ) {
+    profile.subscription_tier = "free";
+    profile.subscription_status = "expired";
+    // Fire-and-forget DB update so next load is consistent
+    getSupabase()
+      .from("user_profiles")
+      .update({ subscription_tier: "free", subscription_status: "expired" })
+      .eq("id", userId)
+      .then(() => {});
+  }
+
+  return profile;
 }
 
 export async function upsertProfile(

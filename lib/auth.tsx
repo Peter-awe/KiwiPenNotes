@@ -65,24 +65,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check if this email has a pending upgrade (pre-assigned by admin)
+  const checkPendingUpgrade = useCallback(async (userId: string, email: string) => {
+    try {
+      const { data } = await getSupabase()
+        .from("pending_upgrades")
+        .select("tier, expires_at")
+        .eq("email", email)
+        .single();
+      if (data) {
+        // Apply the upgrade
+        await getSupabase()
+          .from("user_profiles")
+          .update({
+            subscription_tier: data.tier,
+            subscription_status: "active",
+            subscription_expires_at: data.expires_at,
+          })
+          .eq("id", userId);
+        // Remove the pending record
+        await getSupabase()
+          .from("pending_upgrades")
+          .delete()
+          .eq("email", email);
+      }
+    } catch {
+      // Silent fail — pending upgrade check is non-critical
+    }
+  }, []);
+
   // Load profile for user (email passed explicitly to avoid stale closure)
   const loadProfile = useCallback(async (userId: string, email?: string) => {
+    const userEmail = email || user?.email || "";
     const p = await getProfile(userId);
     if (!p) {
       // First login — create profile & send welcome email
       await upsertProfile(userId, {
-        email: email || user?.email || "",
+        email: userEmail,
         subscription_tier: "free",
         subscription_status: "none",
         stt_hours_used: 0,
       });
+      // Check for pre-assigned upgrade before loading profile
+      if (userEmail) await checkPendingUpgrade(userId, userEmail);
       const created = await getProfile(userId);
       setProfile(created);
       sendWelcomeEmail();
     } else {
       setProfile(p);
     }
-  }, [user?.email, sendWelcomeEmail]);
+  }, [user?.email, sendWelcomeEmail, checkPendingUpgrade]);
 
   const refreshProfile = useCallback(async () => {
     if (user) await loadProfile(user.id);
